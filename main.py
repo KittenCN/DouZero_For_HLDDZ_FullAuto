@@ -316,87 +316,91 @@ class MyPyQT_Form(QtWidgets.QWidget, Ui_Form):
 
     # Optimize by 错过
     def handle_others(self, playPos, label, nick):
-        label.setText("等待出牌中")
-        QtWidgets.QApplication.processEvents(QEventLoop.AllEvents, 10)  # 更新界面
-        # passPos 识别"不出"区域和识别牌的区域不一样（识别牌的区域很小），所以用 passPos
-        passPos = self.LPassPos if nick == "上家" else self.RPassPos
-        pass_flag = helper.LocateOnScreen('pass', region=passPos, confidence=self.PassConfidence)
-        lastCards = ""
-        sameCount = 0
-        sameCountSingle = 0  # 如果长度为 1，可能是顺子的起始，所以算两次
-        need_newline = 2
-        print("等待", nick, "出牌", end="")
-        while self.RunGame and pass_flag is None:
-            QtWidgets.QApplication.processEvents(QEventLoop.AllEvents, 10)
-            img, _ = helper.Screenshot()  # 只用一次截图，find_other_cards 和 LocateOnScreen 添加了 img 参数
-            need_newline += 1
-            if need_newline % 2 == 0:
-                print(".", end="")
-                need_newline = 0
-            st = time.time()
-            cards = self.find_other_cards(pos=playPos, img=img)  # img
-            move_type = get_move_type(self.real_to_env(cards))
-
-            last_played_cards = self.upper_played_cards_real if nick == "上家" else self.lower_played_cards_real
-            last_play_count = 0
-            if cards == last_played_cards and last_play_count <= 2:
-                last_play_count += 1
-                self.sleep(300)
-
-            if len(cards) == 0:  # 如果没有卡，不要等 300 毫秒，直接搜索 pass
-                pass_flag = helper.LocateOnScreen('pass', region=passPos, confidence=self.PassConfidence,
-                                                  img=img)  # 需要在 helper 中增加img这个参数，默认为 None
-            elif cards == lastCards and len(cards) > 0:
-                sameCount += 1
-                requireCounts = 2 if len(cards) == 1 else 1
-                if sameCount >= requireCounts and move_type["type"] != 15:
-                    break
-                else:
-                    if need_newline > 2:
-                        need_newline = 0
-                        print()
-                    # print("检测到", sameCount, "次", self.move_type_tostr(move_type))
-                    need_newline += 1
-                    label.setText(cards)
-                    self.sleep(100)
-            else:
-                lastCards = cards
-                sameCount = 0
-                print(cards, end=" ")
-                et = time.time()
-                if et - st < 0.3:
-                    self.sleep(300 - (et - st) * 1000)
-            # 不管牌的长度，都要执行，除非 break 了
-            # 20% 的概率寻找 change_player
-            self.detect_start_btn()
-
-        if pass_flag is None:
-            self.other_played_cards_real = lastCards
-            print("\n" + nick, "出牌", self.other_played_cards_real)
-            label.setText(self.other_played_cards_real)
+        try:
+            label.setText("等待出牌中")
             QtWidgets.QApplication.processEvents(QEventLoop.AllEvents, 10)  # 更新界面
-        else:
-            self.other_played_cards_real = ""
-            label.setText("不出")
-            self.sleep(200)
-            print("\n" + nick, "不要")
-        if not self.RunGame:
-            self.other_played_cards_real = ""
-        self.other_played_cards_env = [RealCard2EnvCard[c] for c in list(self.other_played_cards_real)]
-        self.other_played_cards_env.sort()
-        self.env.step(self.user_position, self.other_played_cards_env)
-        # self.animation_sleep(cards)
-        cards = self.other_played_cards_real
-        # 更新上下家手牌
-        if nick == "上家":
-            self.upper_played_cards_real = cards
-        else:
-            self.lower_played_cards_real = cards
+            # passPos 识别"不出"区域和识别牌的区域不一样（识别牌的区域很小），所以用 passPos
+            passPos = self.LPassPos if nick == "上家" else self.RPassPos
+            pass_flag = helper.LocateOnScreen('pass', region=passPos, confidence=self.PassConfidence)
+            lastCards = ""
+            sameCount = 0
+            sameCountSingle = 0  # 如果长度为 1，可能是顺子的起始，所以算两次
+            need_newline = 2
+            print("等待", nick, "出牌", end="")
+            while self.RunGame and pass_flag is None:
+                QtWidgets.QApplication.processEvents(QEventLoop.AllEvents, 10)
+                img, _ = helper.Screenshot()  # 只用一次截图，find_other_cards 和 LocateOnScreen 添加了 img 参数
+                need_newline += 1
+                if need_newline % 2 == 0:
+                    print(".", end="")
+                    need_newline = 0
+                st = time.time()
+                cards = self.find_other_cards(pos=playPos, img=img)  # img
+                move_type = get_move_type(self.real_to_env(cards))
 
-        move_type = get_move_type(self.real_to_env(cards))
-        animation_types = {4, 5, 13, 14, 8, 9, 10, 11, 12}
-        if move_type["type"] in animation_types or len(cards) >= 6:
-            self.waitUntilNoAnimation()
+                last_played_cards = self.upper_played_cards_real if nick == "上家" else self.lower_played_cards_real
+                last_play_count = 0
+                if cards == last_played_cards and last_play_count <= 2:
+                    last_play_count += 1
+                    self.sleep(300)
+
+                if len(cards) == 0:  # 如果没有卡，不要等 300 毫秒，直接搜索 pass
+                    pass_flag = helper.LocateOnScreen('pass', region=passPos, confidence=self.PassConfidence,
+                                                    img=img)  # 需要在 helper 中增加img这个参数，默认为 None
+                elif cards == lastCards and len(cards) > 0:
+                    sameCount += 1
+                    requireCounts = 2 if len(cards) == 1 else 1
+                    if sameCount >= requireCounts and move_type["type"] != 15:
+                        break
+                    else:
+                        if need_newline > 2:
+                            need_newline = 0
+                            print()
+                        # print("检测到", sameCount, "次", self.move_type_tostr(move_type))
+                        need_newline += 1
+                        label.setText(cards)
+                        self.sleep(100)
+                else:
+                    lastCards = cards
+                    sameCount = 0
+                    print(cards, end=" ")
+                    et = time.time()
+                    if et - st < 0.3:
+                        self.sleep(300 - (et - st) * 1000)
+                # 不管牌的长度，都要执行，除非 break 了
+                # 20% 的概率寻找 change_player
+                self.detect_start_btn()
+
+            if pass_flag is None:
+                self.other_played_cards_real = lastCards
+                print("\n" + nick, "出牌", self.other_played_cards_real)
+                label.setText(self.other_played_cards_real)
+                QtWidgets.QApplication.processEvents(QEventLoop.AllEvents, 10)  # 更新界面
+            else:
+                self.other_played_cards_real = ""
+                label.setText("不出")
+                self.sleep(200)
+                print("\n" + nick, "不要")
+            if not self.RunGame:
+                self.other_played_cards_real = ""
+            self.other_played_cards_env = [RealCard2EnvCard[c] for c in list(self.other_played_cards_real)]
+            self.other_played_cards_env.sort()
+            self.env.step(self.user_position, self.other_played_cards_env)
+            # self.animation_sleep(cards)
+            cards = self.other_played_cards_real
+            # 更新上下家手牌
+            if nick == "上家":
+                self.upper_played_cards_real = cards
+            else:
+                self.lower_played_cards_real = cards
+
+            move_type = get_move_type(self.real_to_env(cards))
+            animation_types = {4, 5, 13, 14, 8, 9, 10, 11, 12}
+            if move_type["type"] in animation_types or len(cards) >= 6:
+                self.waitUntilNoAnimation()
+        except Exception as e:
+            print(e)
+            traceback.print_exc()
 
     def animation_sleep(self, cards, normalTime=0):
         if (len(cards) == 4 and len(set(cards)) == 1) or \
@@ -432,7 +436,10 @@ class MyPyQT_Form(QtWidgets.QWidget, Ui_Form):
     def record_cards(self):
         try:
             for card in self.other_played_cards_env:
-                self.other_hand_cards.remove(card)
+                if card in self.other_hand_cards:
+                    self.other_hand_cards.remove(card)
+                else:
+                    print("错误：", card, "不在", self.other_hand_cards)
         except ValueError as e:
             traceback.print_exc()
 
@@ -457,104 +464,109 @@ class MyPyQT_Form(QtWidgets.QWidget, Ui_Form):
         st = time.time()
         step_count = 0
         while not self.env.game_over and self.RunGame:
-            if self.play_order == 0:
-                self.PredictedCard.setText("...")
-                action_message, action_list = self.env.step(self.user_position)
-                self.UserHandCards.setText("手牌：" + str(''.join(
-                    [EnvCard2RealCard[c] for c in self.env.info_sets[self.user_position].player_hand_cards]))[::-1])
-                action_list = action_list[:8]
-                action_list_str = "\n".join([ainfo[0] + " " + ainfo[1] for ainfo in action_list])
-                self.PredictedCard.setText(action_message["action"] if action_message["action"] else "不出")
-                self.WinRate.setText(action_list_str)
-                action_list_str = " | ".join([ainfo[0] + " " + ainfo[1] for ainfo in action_list])
-                # self.sleep(400)
-                hand_cards_str = ''.join(
-                    [EnvCard2RealCard[c] for c in self.env.info_sets[self.user_position].player_hand_cards])
-                if first_run:
-                    self.initial_model_rate = round(float(action_message["win_rate"]), 3)  # win_rate at start
-                    first_run = False
-                print("出牌:", action_message["action"] if action_message["action"] else "Pass", "| 得分:",
-                      round(action_message["win_rate"], 3), "| 剩余手牌:", hand_cards_str)
-                print(action_list_str)
-                if not (self.upper_played_cards_real == "DX" or self.lower_played_cards_real == "DX" or
-                        (len(hand_cards_str + action_message["action"]) == 1 and len(
-                            self.upper_played_cards_real) > 1) or
-                        (len(hand_cards_str + action_message["action"]) == 1 and len(
-                            self.lower_played_cards_real) > 1)):
-                    if action_message["action"] == "":
-                        tryCount = 2
-                        result = helper.LocateOnScreen("pass_btn", region=self.PassBtnPos, confidence=0.85)
-                        passSign = helper.LocateOnScreen("pass", region=(830, 655, 150, 70), confidence=0.85)
-                        while result is None is None and tryCount > 0:
-                            if not self.RunGame:
-                                break
-                            if passSign is not None and tryCount <= 0:
-                                break
-                            print("等待不出按钮")
-                            self.detect_start_btn()
-                            tryCount -= 1
+            try:
+                if self.play_order == 0:
+                    self.PredictedCard.setText("...")
+                    action_message, action_list = self.env.step(self.user_position)
+                    self.UserHandCards.setText("手牌：" + str(''.join(
+                        [EnvCard2RealCard[c] for c in self.env.info_sets[self.user_position].player_hand_cards]))[::-1])
+                    action_list = action_list[:8]
+                    action_list_str = "\n".join([ainfo[0] + " " + ainfo[1] for ainfo in action_list])
+                    self.PredictedCard.setText(action_message["action"] if action_message["action"] else "不出")
+                    self.WinRate.setText(action_list_str)
+                    action_list_str = " | ".join([ainfo[0] + " " + ainfo[1] for ainfo in action_list])
+                    # self.sleep(400)
+                    hand_cards_str = ''.join(
+                        [EnvCard2RealCard[c] for c in self.env.info_sets[self.user_position].player_hand_cards])
+                    if first_run:
+                        self.initial_model_rate = round(float(action_message["win_rate"]), 3)  # win_rate at start
+                        first_run = False
+                    print("出牌:", action_message["action"] if action_message["action"] else "Pass", "| 得分:",
+                        round(action_message["win_rate"], 3), "| 剩余手牌:", hand_cards_str)
+                    print(action_list_str)
+                    if not (self.upper_played_cards_real == "DX" or self.lower_played_cards_real == "DX" or
+                            (len(hand_cards_str + action_message["action"]) == 1 and len(
+                                self.upper_played_cards_real) > 1) or
+                            (len(hand_cards_str + action_message["action"]) == 1 and len(
+                                self.lower_played_cards_real) > 1)):
+                        if action_message["action"] == "":
+                            tryCount = 2
                             result = helper.LocateOnScreen("pass_btn", region=self.PassBtnPos, confidence=0.85)
                             passSign = helper.LocateOnScreen("pass", region=(830, 655, 150, 70), confidence=0.85)
-                            self.sleep(100)
-                        helper.ClickOnImage("pass_btn", region=self.PassBtnPos, confidence=0.85)
-                    else:
-                        if len(hand_cards_str) == 0 and len(action_message["action"]) == 1:
-                            helper.SelectCards(action_message["action"], True)
+                            while result is None is None and tryCount > 0:
+                                if not self.RunGame:
+                                    break
+                                if passSign is not None and tryCount <= 0:
+                                    break
+                                print("等待不出按钮")
+                                self.detect_start_btn()
+                                tryCount -= 1
+                                result = helper.LocateOnScreen("pass_btn", region=self.PassBtnPos, confidence=0.85)
+                                passSign = helper.LocateOnScreen("pass", region=(830, 655, 150, 70), confidence=0.85)
+                                self.sleep(100)
+                            helper.ClickOnImage("pass_btn", region=self.PassBtnPos, confidence=0.85)
                         else:
-                            helper.SelectCards(action_message["action"])
-                        tryCount = 10
-                        result = helper.LocateOnScreen("play_card", region=self.PassBtnPos, confidence=0.85)
-                        while result is None and tryCount > 0:
-                            print("等待出牌按钮")
-                            tryCount -= 1
+                            if len(hand_cards_str) == 0 and len(action_message["action"]) == 1:
+                                helper.SelectCards(action_message["action"], True)
+                            else:
+                                helper.SelectCards(action_message["action"])
+                            tryCount = 10
                             result = helper.LocateOnScreen("play_card", region=self.PassBtnPos, confidence=0.85)
+                            while result is None and tryCount > 0:
+                                print("等待出牌按钮")
+                                tryCount -= 1
+                                result = helper.LocateOnScreen("play_card", region=self.PassBtnPos, confidence=0.85)
+                                self.sleep(100)
                             self.sleep(100)
-                        self.sleep(100)
-                        helper.ClickOnImage("play_card", region=self.PassBtnPos, confidence=0.85)
-                    self.sleep(300)
-                else:
-                    print("要不起，跳过出牌")
-                self.GameRecord.append(action_message["action"] if action_message["action"] != "" else "Pass")
-                self.sleep(500)
-                if action_message["action"]:
-                    cards = action_message["action"]
-                    move_type = get_move_type(self.real_to_env(cards))
-                    animation_types = {4, 5, 13, 14, 8, 9, 10, 11, 12}
-                    if move_type["type"] in animation_types or len(cards) >= 6:
-                        self.waitUntilNoAnimation()
+                            helper.ClickOnImage("play_card", region=self.PassBtnPos, confidence=0.85)
+                        self.sleep(300)
+                    else:
+                        print("要不起，跳过出牌")
+                    self.GameRecord.append(action_message["action"] if action_message["action"] != "" else "Pass")
+                    self.sleep(500)
+                    if action_message["action"]:
+                        cards = action_message["action"]
+                        move_type = get_move_type(self.real_to_env(cards))
+                        animation_types = {4, 5, 13, 14, 8, 9, 10, 11, 12}
+                        if move_type["type"] in animation_types or len(cards) >= 6:
+                            self.waitUntilNoAnimation()
 
+                    self.detect_start_btn()
+
+                    self.play_order = 1
+
+                elif self.play_order == 1:
+                    if self.other_played_cards_real != "DX" or len(self.other_played_cards_real) == 4 and len(
+                            set(self.other_played_cards_real)) == 1:
+                        self.handle_others(self.RPlayedCardsPos, self.RPlayedCard, "下家")
+                    else:
+                        self.other_played_cards_real = ""
+                        self.other_played_cards_env = ""
+                        self.env.step(self.user_position, [])
+                    self.GameRecord.append(self.other_played_cards_real if self.other_played_cards_real != "" else "Pass")
+                    self.record_cards()
+                    self.play_order = 2
+                    self.sleep(200)
+
+                elif self.play_order == 2:
+                    if self.other_played_cards_real != "DX" or len(self.other_played_cards_real) == 4 and len(
+                            set(self.other_played_cards_real)) == 1:
+                        self.handle_others(self.LPlayedCardsPos, self.LPlayedCard, "上家")
+                    else:
+                        self.other_played_cards_real = ""
+                        self.other_played_cards_env = ""
+                        self.env.step(self.user_position, [])
+                    self.GameRecord.append(self.other_played_cards_real if self.other_played_cards_real != "" else "Pass")
+                    self.record_cards()
+                    self.play_order = 0
+                    self.sleep(100)
+                step_count = (step_count + 1) % 3
+                self.sleep(20)
+            except:
+                print("出错了")
+                traceback.print_exc()
+                self.sleep(1000)
                 self.detect_start_btn()
-
-                self.play_order = 1
-
-            elif self.play_order == 1:
-                if self.other_played_cards_real != "DX" or len(self.other_played_cards_real) == 4 and len(
-                        set(self.other_played_cards_real)) == 1:
-                    self.handle_others(self.RPlayedCardsPos, self.RPlayedCard, "下家")
-                else:
-                    self.other_played_cards_real = ""
-                    self.other_played_cards_env = ""
-                    self.env.step(self.user_position, [])
-                self.GameRecord.append(self.other_played_cards_real if self.other_played_cards_real != "" else "Pass")
-                self.record_cards()
-                self.play_order = 2
-                self.sleep(200)
-
-            elif self.play_order == 2:
-                if self.other_played_cards_real != "DX" or len(self.other_played_cards_real) == 4 and len(
-                        set(self.other_played_cards_real)) == 1:
-                    self.handle_others(self.LPlayedCardsPos, self.LPlayedCard, "上家")
-                else:
-                    self.other_played_cards_real = ""
-                    self.other_played_cards_env = ""
-                    self.env.step(self.user_position, [])
-                self.GameRecord.append(self.other_played_cards_real if self.other_played_cards_real != "" else "Pass")
-                self.record_cards()
-                self.play_order = 0
-                self.sleep(100)
-            step_count = (step_count + 1) % 3
-            self.sleep(20)
-
         self.sleep(500)
         self.RunGame = False
 
