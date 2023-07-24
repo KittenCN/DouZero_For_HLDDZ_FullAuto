@@ -114,6 +114,7 @@ class MyPyQT_Form(QtWidgets.QWidget, Ui_Form):
         self.SleepTime = 0.1  # 循环中睡眠时间
         self.RunGame = False
         self.AutoPlay = False
+        self.MingpaiFlag = False
         # ------ 阈值 ------
         self.BidThresholds = [0,  # 叫地主阈值
                               0.3,  # 抢地主阈值 (自己第一个叫地主)
@@ -168,8 +169,14 @@ class MyPyQT_Form(QtWidgets.QWidget, Ui_Form):
             'landlord_up': "baselines/douzero_ADP/landlord_up.ckpt",
             'landlord_down': "baselines/douzero_ADP/landlord_down.ckpt"
         }
-        LandlordModel.init_model("baselines/douzero_WP/landlord.ckpt")
-        # LandlordModel.init_model("baselines/douzero_ADP/landlord.ckpt")
+        self.card_play_sl_model_path = {
+            'landlord': "baselines/sl/landlord.ckpt",
+            'landlord_up': "baselines/sl/landlord_up.ckpt",
+            'landlord_down': "baselines/sl/landlord_down.ckpt"
+        }
+        # LandlordModel.init_model("baselines/douzero_WP/landlord.ckpt")
+        LandlordModel.init_model("baselines/douzero_ADP/landlord.ckpt")
+        # LandlordModel.init_model("baselines/sl/landlord.ckpt")
 
     def init_display(self):
         self.WinRate.setText("评分")
@@ -267,10 +274,12 @@ class MyPyQT_Form(QtWidgets.QWidget, Ui_Form):
 
         # ai_players = [self.user_position,
         #               DeepAgent(self.user_position, self.card_play_model_path_dict[self.user_position])]
-        ai_players = [self.user_position,
-                       DeepAgent(self.user_position, self.card_play_wp_model_path[self.user_position])]
         # ai_players = [self.user_position,
-        #                DeepAgent(self.user_position, self.card_play_adp_model_path[self.user_position])]
+        #                DeepAgent(self.user_position, self.card_play_wp_model_path[self.user_position])]
+        ai_players = [self.user_position,
+                       DeepAgent(self.user_position, self.card_play_adp_model_path[self.user_position])]
+        # ai_players = [self.user_position,
+        #               DeepAgent(self.user_position, self.card_play_sl_model_path[self.user_position])]
         self.env = GameEnv(ai_players, None)
 
         try:
@@ -923,7 +932,7 @@ class MyPyQT_Form(QtWidgets.QWidget, Ui_Form):
                 self.sleep(5000)
         else:
             self.sleep(3000)
-        if win_rate > self.MingpaiThreshold:
+        if win_rate > self.MingpaiThreshold and self.MingpaiFlag == True:
             helper.ClickOnImage("mingpai_btn", region=self.GeneralBtnPos)
             self.initial_mingpai = 1
         print("结束")
